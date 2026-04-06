@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>EcoPetropavl — Экологический мониторинг</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+<style>
+:root{
+  --accent:#2c7a7b;
+  --accent-light:#38b2ac;
+  --accent-dark:#1a5c5d;
+  --bg:#f0f5f4;
+  --card:rgba(255,255,255,0.92);
+  --shadow:0 8px 32px rgba(20,40,40,0.10);
+  --radius:14px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%; overflow:hidden;}
+body{font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:#1a3a3a;}
+
+/* ===== LAYOUT ===== */
+#appShell{display:flex; flex-direction:column; height:100vh;}
+
+/* TOP BAR */
+#topBar{
+  display:flex; align-items:center; justify-content:space-between;
+  background:linear-gradient(135deg,var(--accent-dark),var(--accent),var(--accent-light));
+  color:white; padding:0 24px; height:56px; flex-shrink:0;
+  box-shadow:0 2px 20px rgba(0,0,0,0.15); z-index:1002;
+}
+#topBar .logo{display:flex; align-items:center; gap:10px; font-weight:800; font-size:18px; letter-spacing:-0.3px;}
+#topBar .logo span{opacity:0.7; font-weight:500; font-size:13px;}
+#topBar .status{display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500;}
+#topBar .status .dot-live{width:8px;height:8px;border-radius:50%;background:#68d391;box-shadow:0 0 6px #68d391;animation:pulse-live 2s infinite;}
+@keyframes pulse-live{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* MAIN AREA */
+#mainArea{display:flex; flex:1; overflow:hidden; position:relative;}
+
+/* SIDEBAR */
+#sidebar{
+  width:280px; flex-shrink:0; background:var(--card); border-right:1px solid rgba(0,0,0,0.04);
+  display:flex; flex-direction:column; overflow-y:auto; z-index:1001;
+  box-shadow:2px 0 20px rgba(0,0,0,0.04);
+}
+#sidebar .section{padding:16px 18px; border-bottom:1px solid rgba(0,0,0,0.04);}
+#sidebar .section-title{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#7a9a9a; font-weight:700; margin-bottom:10px;}
+.stat-card{
+  background:linear-gradient(135deg,#f7fffe,#edf7f6); border-radius:10px; padding:12px 14px; margin-bottom:8px;
+  border:1px solid rgba(44,122,123,0.08);
+}
+.stat-card .stat-label{font-size:11px; color:#6a8a8a; font-weight:600; margin-bottom:4px;}
+.stat-card .stat-value{font-size:22px; font-weight:800; color:var(--accent-dark);}
+.stat-card .stat-value .unit{font-size:12px; font-weight:500; color:#8aaa; margin-left:2px;}
+.stat-card .stat-bar{height:4px; border-radius:2px; background:#e0ece9; margin-top:8px; overflow:hidden;}
+.stat-card .stat-bar .fill{height:100%; border-radius:2px; transition:width 1s ease;}
+
+/* LEGEND in sidebar */
+.legend-row{display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:13px; font-weight:500;}
+.legend-dot{width:12px;height:12px;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.15);}
+
+/* MAP */
+#mapWrap{flex:1; position:relative;}
+#map{height:100%; width:100%;}
+
+/* POLLUTION PANEL on map */
+#pollutionPanel{
+  position:absolute; top:14px; left:50%; transform:translateX(-50%);
+  background:var(--card); padding:10px 20px; border-radius:var(--radius);
+  box-shadow:var(--shadow); font-weight:700; color:var(--accent-dark); z-index:1000;
+  backdrop-filter:blur(10px); font-size:14px;
+}
+
+/* CHAT */
+#chatBot{
+  position:fixed; bottom:24px; right:24px; width:370px; max-height:520px; min-height:140px;
+  display:flex; flex-direction:column; background:var(--card); border-radius:var(--radius);
+  box-shadow:0 12px 40px rgba(20,40,40,0.16); overflow:hidden; font-size:14px; z-index:1002;
+  border:1px solid rgba(44,122,123,0.08); backdrop-filter:blur(12px);
+}
+#chatHeader{
+  background:linear-gradient(135deg,var(--accent-dark),var(--accent));
+  color:white; padding:14px 16px; font-weight:700; display:flex; align-items:center; justify-content:space-between;
+}
+#chatHeader .title{display:flex; align-items:center; gap:8px;}
+#chatHeader .online{font-size:11px; opacity:0.85; font-weight:500;}
+#chatContent{flex:1; display:flex; flex-direction:column; overflow-y:auto; padding:12px; background:transparent;}
+#chatInputArea{display:flex; border-top:1px solid rgba(0,0,0,0.04); padding:10px; gap:8px; background:rgba(250,252,252,0.8);}
+#chatInputArea input{flex:1; padding:10px 14px; border-radius:10px; border:1px solid rgba(44,122,123,0.12); outline:none; font-size:14px; font-family:inherit; transition:border 0.2s;}
+#chatInputArea input:focus{border-color:var(--accent);}
+#chatInputArea button{padding:10px 16px; background:var(--accent); color:white; border:none; border-radius:10px; cursor:pointer; font-weight:700; font-size:15px; transition:all 0.2s;}
+#chatInputArea button:hover{background:var(--accent-dark); transform:scale(1.05);}
+
+.msg-user{align-self:flex-end; background:linear-gradient(135deg,#e6fefb,#d0f5ef); color:#0a4a3a; padding:9px 14px; margin:5px 0; border-radius:14px 14px 4px 14px; max-width:80%; font-weight:600; font-size:13px;}
+.msg-bot{align-self:flex-start; background:linear-gradient(135deg,#f0fff7,#e8faf0); color:#1a5a3a; padding:9px 14px; margin:5px 0; border-radius:14px 14px 14px 4px; max-width:85%; font-size:13px; line-height:1.5;}
+
+.typing{display:flex; align-items:center; gap:6px; padding:9px 14px; margin:5px 0; border-radius:14px; background:linear-gradient(90deg,#f8fffe,#f0f8f6);}
+.typing .dot{width:7px;height:7px;background:var(--accent-light);border-radius:50%;animation:blink 1s infinite;}
+.typing .dot:nth-child(2){animation-delay:0.15s}
+.typing .dot:nth-child(3){animation-delay:0.3s}
+.typing .label{font-size:12px; color:#7aaa; margin-left:4px;}
+@keyframes blink{0%{transform:translateY(0);opacity:0.3}50%{transform:translateY(-4px);opacity:1}100%{transform:translateY(0);opacity:0.3}}
+
+#quickActions{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;}
+.quick-btn{
+  background:linear-gradient(135deg,#e8fcf8,#f0fff7); color:var(--accent-dark); border:1px solid rgba(44,122,123,0.15);
+  padding:8px 14px; border-radius:20px; font-size:12px; cursor:pointer; font-weight:600; font-family:inherit;
+  transition:all 0.25s ease;
+}
+.quick-btn:hover{background:var(--accent); color:white; border-color:var(--accent); transform:scale(1.05); box-shadow:0 4px 12px rgba(44,122,123,0.25);}
+
+.leaflet-interactive{transition:transform 0.45s ease, opacity 0.45s ease;}
+
+/* FOOTER */
+#footer{
+  height:32px; flex-shrink:0; background:rgba(26,92,93,0.95); color:rgba(255,255,255,0.7);
+  display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:500; letter-spacing:0.3px;
+}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  #sidebar{display:none;}
+  #chatBot{width:92%; right:4%; bottom:44px;}
+}
+@media(max-width:420px){
+  #topBar{padding:0 12px; height:48px;}
+  #topBar .logo{font-size:15px;}
+}
+</style>
+</head>
+<body>
+
+<div id="appShell">
+
+  <!-- TOP BAR -->
+  <div id="topBar">
+    <div class="logo">🌍 EcoPetropavl <span>| Экологический мониторинг</span></div>
+    <div class="status">
+      <div class="dot-live"></div>
+      Мониторинг в реальном времени
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="mainArea">
+
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <div class="section">
+        <div class="section-title">📊 Статистика воздуха</div>
+        <div class="stat-card">
+          <div class="stat-label">Средний PM2.5</div>
+          <div class="stat-value" id="statAvg">—<span class="unit">мкг/м³</span></div>
+          <div class="stat-bar"><div class="fill" id="statAvgBar" style="width:0%;background:var(--accent);"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Точек мониторинга</div>
+          <div class="stat-value" id="statCount">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Опасных зон</div>
+          <div class="stat-value" id="statDanger" style="color:#e53e3e;">—</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">🎨 Легенда</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#38a169;"></div> Норма (&lt;50)</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#dd6b20;"></div> Среднее (50–100)</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#e53e3e;"></div> Опасно (&gt;100)</div>
+      </div>
+      <div class="section">
+        <div class="section-title">🌤 Погода сейчас</div>
+        <div id="weatherBlock" style="font-size:13px; line-height:1.7; color:#3a6a6a;">
+          Загрузка...
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">📅 Прогноз на 3 дня</div>
+        <div id="forecastBlock" style="font-size:12px; line-height:1.6; color:#3a6a6a;">
+          Загрузка...
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">ℹ️ О проекте</div>
+        <p style="font-size:12px; line-height:1.6; color:#5a7a7a;">
+          EcoPetropavl — система мониторинга качества воздуха в Петропавловске. Данные обновляются каждые 5 минут. Используйте чат-помощника для анализа экологии.
+        </p>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div id="mapWrap">
+      <div id="map"></div>
+      <div id="pollutionPanel">🌍 Экология воздуха — загрузка...</div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div id="footer">© 2025 EcoPetropavl — Экологический мониторинг г. Петропавловск</div>
+
+</div>
+
+<!-- CHAT -->
+<div id="chatBot">
+  <div id="chatHeader">
+    <div class="title">🌱 <span>Эко-помощник</span></div>
+    <div class="online">● Онлайн</div>
+  </div>
+  <div id="chatContent">
+    <div id="quickActions">
+      <button class="quick-btn" onclick="quickSend('Покажи опасные зоны')">🔴 Опасные зоны</button>
+      <button class="quick-btn" onclick="quickSend('Качество воздуха сегодня')">🌫 Воздух</button>
+      <button class="quick-btn" onclick="quickSend('Что делать для экологии?')">💡 Советы</button>
+    </div>
+    <div class="msg-bot">Привет! Я ваш экологический помощник 🌿 Задайте вопрос или нажмите кнопку выше.</div>
+  </div>
+  <div id="chatInputArea">
+    <input type="text" id="chatInput" placeholder="Введите сообщение...">
+<button onclick="sendMessage()">Отправить</button>
+  </div>
+</div>
+
+<script>
+// 1. Инициализация переменных (Один раз в самом верху!)
+var markers = [];
+const map = L.map('map', {
+    center: [54.867, 69.150],
+    zoom: 13,
+    zoomControl: false
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+var heatLayer = L.heatLayer([], {radius: 25, blur: 15}).addTo(map);
+
+// 2. Функция обновления данных (Карта + Панель)
+async function updatePollutionData() {
+    console.log("Запрос данных...");
+    try {
+        const res = await fetch('/pollution-data');
+        const data = await res.json();
+        console.log("Данные получены внутри функции:", data);
+
+        // Очистка карты
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+
+        let total = 0;
+
+        data.forEach(pt => {
+            total += pt.level;
+            const color = pt.level > 100 ? '#e53e3e' : pt.level > 50 ? '#dd6b20' : '#38a169';
+            
+            const m = L.circleMarker([pt.lat, pt.lon], {
+                radius: 10,
+                fillColor: color,
+                color: "#fff",
+                weight: 2,
+                fillOpacity: 0.9
+            }).addTo(map);
+
+            m.bindPopup(`<b>${pt.name}</b><br>PM2.5: ${pt.level}`);
+            markers.push(m);
+        });
+
+        // Обновляем левую панель (безопасно)
+        const avg = Math.round(total / (data.length || 1));
+        const avgEl = document.getElementById('statAvg');
+        if (avgEl) avgEl.innerText = avg;
+        
+        const countEl = document.getElementById('statCount');
+        if (countEl) countEl.innerText = data.length;
+
+    } catch (e) {
+        console.error("Ошибка обновления данных:", e);
+    }
+}
+
+// 3. Функции чата
+// Функция отправки сообщения
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const content = document.getElementById('chatContent');
+    
+    const text = input.value.trim();
+    if (!text) return; // Если пусто — ничего не делаем
+
+    // Отображаем сообщение пользователя
+    appendUser(text);
+    input.value = ''; // Очищаем поле сразу
+
+    // Добавляем временное сообщение "печатает..."
+    const tempId = "bot-loading-" + Date.now();
+    content.innerHTML += `<div class="msg bot" id="${tempId}"><i>Эко-бот думает...</i></div>`;
+    content.scrollTop = content.scrollHeight;
+
+    try {
+        const response = await fetch('/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: text })
+        });
+        
+        const data = await response.json();
+        
+        // Удаляем индикатор загрузки
+        const tempMsg = document.getElementById(tempId);
+        if (tempMsg) tempMsg.remove();
+
+        // Показываем ответ ИИ
+        appendBot(data.reply || "ИИ не смог ответить.");
+    } catch (err) {
+        console.error("Ошибка:", err);
+        const tempMsg = document.getElementById(tempId);
+        if (tempMsg) tempMsg.remove();
+        appendBot("Ошибка связи с сервером.");
+    }
+}
+
+// ДОБАВЛЯЕМ ОБРАБОТКУ ENTER
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('chatInput');
+    if (input) {
+        input.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    }
+});
+
+// Вспомогательные функции отрисовки чата
+function appendUser(t) {
+    const c = document.getElementById('chatContent');
+    if(c) c.innerHTML += `<div class="msg user"><b>Вы:</b><br>${t}</div>`;
+}
+
+function appendBot(t) {
+    const c = document.getElementById('chatContent');
+    if(c) c.innerHTML += `<div class="msg bot"><b>Эко-бот:</b><br>${t}</div>`;
+}
+
+// 4. Запуск при загрузке
+window.onload = () => {
+    // Принудительно скрываем загрузку
+    const loader = document.getElementById('loader') || document.querySelector('.loading');
+    if (loader) loader.style.display = 'none';
+    
+    updatePollutionData();
+};
+
+// Слушатель Enter
+document.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+});
+</script>
+
+</body>
+</html>
