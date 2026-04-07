@@ -15,9 +15,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Раздача статических файлов через обработчик
+// Раздача статических файлов из папки public
+app.use(express.static(path.join(__dirname, "public")));
+
+// Альтернативный обработчик для статических файлов
 app.get(/\.(css|js|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/, (req, res) => {
-  const filePath = path.join(__dirname, req.path);
+  const filePath = path.join(__dirname, "public", req.path);
 
   // Определяем MIME типы
   const mimeTypes = {
@@ -50,7 +53,7 @@ const GEMINI_KEY = process.env.GEMINI_KEY;
 
 // ===== Маршрут для главной страницы =====
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // ===== Чат-бот через Gemini =====
@@ -114,14 +117,9 @@ app.get("/pollution", async (req, res) => {
   }
 });
 
-// ===== Главная страница =====
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
 // ===== Fallback для всех остальных маршрутов (SPA) =====
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 app.listen(3000, () => console.log("Server running on http://localhost:3000"));
