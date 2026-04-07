@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 dotenv.config();
 
@@ -13,14 +14,37 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(
-  express.static(path.join(__dirname), {
-    setHeaders: (res, path) => {
-      if (path.endsWith(".css")) res.type("text/css");
-      if (path.endsWith(".js")) res.type("application/javascript");
-    },
-  }),
-);
+
+// Раздача статических файлов через обработчик
+app.get(/\.(css|js|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/, (req, res) => {
+  const filePath = path.join(__dirname, req.path);
+
+  // Определяем MIME типы
+  const mimeTypes = {
+    ".css": "text/css",
+    ".js": "application/javascript",
+    ".ico": "image/x-icon",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+    ".eot": "application/vnd.ms-fontobject",
+  };
+
+  const ext = path.extname(req.path);
+  const mimeType = mimeTypes[ext] || "application/octet-stream";
+
+  res.type(mimeType);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      res.status(404).send("Not found");
+    }
+  });
+});
 
 const GEMINI_KEY = process.env.GEMINI_KEY;
 
@@ -88,6 +112,16 @@ app.get("/pollution", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ===== Главная страница =====
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+// ===== Fallback для всех остальных маршрутов (SPA) =====
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.listen(3000, () => console.log("Server running on http://localhost:3000"));
