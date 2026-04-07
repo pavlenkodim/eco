@@ -17,6 +17,11 @@ app.use(express.static(path.join(__dirname)));
 
 const GEMINI_KEY = process.env.GEMINI_KEY;
 
+// ===== Маршрут для главной страницы =====
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
 // ===== Чат-бот через Gemini =====
 app.post("/ask", async (req, res) => {
   const prompt = req.body.prompt;
