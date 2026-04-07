@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>EcoPetropavl — Экологический мониторинг</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  </head>
+  <body>
+    <div id="appShell">
+      <!-- TOP BAR -->
+      <div id="topBar">
+        <div class="logo">🌍 EcoPetropavl <span>| Экологический мониторинг</span></div>
+        <div class="status">
+          <div class="dot-live"></div>
+          Мониторинг в реальном времени
+        </div>
+      </div>
+
+      <!-- MAIN -->
+      <div id="mainArea">
+        <!-- SIDEBAR -->
+        <div id="sidebar">
+          <div class="section">
+            <div class="section-title">📊 Статистика воздуха</div>
+            <div class="stat-card">
+              <div class="stat-label">Средний PM2.5</div>
+              <div class="stat-value" id="statAvg">—<span class="unit">мкг/м³</span></div>
+              <div class="stat-bar">
+                <div
+                  class="fill"
+                  id="statAvgBar"
+                  style="width: 0%; background: var(--accent)"
+                ></div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Точек мониторинга</div>
+              <div class="stat-value" id="statCount">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Опасных зон</div>
+              <div class="stat-value" id="statDanger" style="color: #e53e3e">—</div>
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-title">🎨 Легенда</div>
+            <div class="legend-row">
+              <div class="legend-dot" style="background: #38a169"></div>
+              Норма (&lt;50)
+            </div>
+            <div class="legend-row">
+              <div class="legend-dot" style="background: #dd6b20"></div>
+              Среднее (50–100)
+            </div>
+            <div class="legend-row">
+              <div class="legend-dot" style="background: #e53e3e"></div>
+              Опасно (&gt;100)
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-title">🌤 Погода сейчас</div>
+            <div id="weatherBlock" style="font-size: 13px; line-height: 1.7; color: #3a6a6a">
+              Загрузка...
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-title">📅 Прогноз на 3 дня</div>
+            <div id="forecastBlock" style="font-size: 12px; line-height: 1.6; color: #3a6a6a">
+              Загрузка...
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-title">ℹ️ О проекте</div>
+            <p style="font-size: 12px; line-height: 1.6; color: #5a7a7a">
+              EcoPetropavl — система мониторинга качества воздуха в Петропавловске. Данные
+              обновляются каждые 5 минут. Используйте чат-помощника для анализа экологии.
+            </p>
+          </div>
+        </div>
+
+        <!-- MAP -->
+        <div id="mapWrap">
+          <div id="map"></div>
+          <div id="pollutionPanel">🌍 Экология воздуха — загрузка...</div>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div id="footer">© 2025 EcoPetropavl — Экологический мониторинг г. Петропавловск</div>
+    </div>
+
+    <!-- CHAT -->
+    <div id="chatBot">
+      <div id="chatHeader">
+        <div class="title">🌱 <span>Эко-помощник</span></div>
+        <div class="online">● Онлайн</div>
+      </div>
+      <div id="chatContent">
+        <div id="quickActions">
+          <button class="quick-btn" onclick="quickSend('Покажи опасные зоны')">
+            🔴 Опасные зоны
+          </button>
+          <button class="quick-btn" onclick="quickSend('Качество воздуха сегодня')">
+            🌫 Воздух
+          </button>
+          <button class="quick-btn" onclick="quickSend('Что делать для экологии?')">
+            💡 Советы
+          </button>
+        </div>
+        <div class="msg-bot">
+          Привет! Я ваш экологический помощник 🌿 Задайте вопрос или нажмите кнопку выше.
+        </div>
+      </div>
+      <div id="chatInputArea">
+        <input id="userInput" placeholder="Спроси про экологию..." />
+        <button id="sendBtn">➤</button>
+      </div>
+    </div>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
