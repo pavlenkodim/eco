@@ -13,7 +13,14 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+app.use(
+  express.static(path.join(__dirname), {
+    setHeaders: (res, path) => {
+      if (path.endsWith(".css")) res.type("text/css");
+      if (path.endsWith(".js")) res.type("application/javascript");
+    },
+  }),
+);
 
 const GEMINI_KEY = process.env.GEMINI_KEY;
 
@@ -81,10 +88,6 @@ app.get("/pollution", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.listen(3000, () => console.log("Server running on http://localhost:3000"));
